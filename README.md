@@ -4,8 +4,19 @@
 
 ## How to use example
 
-首先需要声明两个结构体，一个用于初始化I2C库，另一个用于存储温湿度。
+首先需要声明两个结构体，一个用于初始化I2C库，另一个用于存储温湿度等。
 
+```
+I (92918) AHT20_get_result: TEMP: 27.204643; RH: 71.734810
+I (93118) AHT20_command_reset: already send RESET code
+I (93318) AHT20_command_measure: already send MEASURES code
+I (94518) AHT20_get_result: TEMP: 27.204643; RH: 71.734810
+I (94718) AHT20_command_reset: already send RESET code
+I (94918) AHT20_command_measure: already send MEASURES code
+I (96118) AHT20_get_result: TEMP: 27.204643; RH: 71.734810
+I (96318) AHT20_command_reset: already send RESET code
+I (96518) AHT20_command_measure: already send MEASURES code
+```
 ```C
 #include "aht20.h"
 
@@ -63,3 +74,4 @@ void app_main(void)
 1. 完成ATH20_get_status函数
 2. 完成AHT20_start_measure_tasks函数
 3. 补全中文注释与英文README
+4. 添加忙时检测

@@ -6,7 +6,7 @@
 #define I2C_MASTER_PORT I2C_NUM_0
 
 i2c_config_t conf =
-    {
+{
         .mode = I2C_MODE_MASTER,
         .sda_io_num = I2C_MASTER_SDA_IO,
         .sda_pullup_en = GPIO_PULLUP_DISABLE,
@@ -16,10 +16,11 @@ i2c_config_t conf =
 };
 
 AHT20_data_t AHT20_data =
-    {
+{
         .RH = 0,
         .TEMP = 0,
-        .busy = 0};
+        .busy = 0
+};
 
 void app_main(void)
 {

@@ -155,17 +155,11 @@ void AHT20_task(AHT20_data_t *pAHT20_data)
     i2c_port = pAHT20_data->i2c_port;
     float rh_buf, temp_buf = 0;
 
-    // init
-    vTaskDelay(40 / portTICK_PERIOD_MS);
-    m_AHT20_command_reset();
-    vTaskDelay(40 / portTICK_PERIOD_MS);
-    m_AHT20_command_init();
-    vTaskDelay(40 / portTICK_PERIOD_MS);
-
     while (1)
     {
+        vTaskDelay(40 / portTICK_PERIOD_MS);
         m_AHT20_command_measure();
-        vTaskDelay(80 / portTICK_PERIOD_MS);
+        vTaskDelay(75 / portTICK_PERIOD_MS);
         m_AHT20_get_result(pAHT20_data);
         m_AHT20_get_status(pAHT20_data);
 
@@ -206,6 +200,6 @@ void AHT20_task(AHT20_data_t *pAHT20_data)
         pAHT20_data->readable = 1;
 
         ESP_LOGD("AHT20_task", "TEMP: %f; RH: %f", pAHT20_data->TEMP, pAHT20_data->RH);
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
     }
 }

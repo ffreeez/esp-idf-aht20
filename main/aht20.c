@@ -200,6 +200,6 @@ void AHT20_task(AHT20_data_t *pAHT20_data)
         pAHT20_data->readable = 1;
 
         ESP_LOGD("AHT20_task", "TEMP: %f; RH: %f", pAHT20_data->TEMP, pAHT20_data->RH);
-        vTaskDelay(500 / portTICK_PERIOD_MS);
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
     }
 }

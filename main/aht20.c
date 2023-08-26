@@ -4,17 +4,41 @@
 #define AHT20_READ_ADDR ((AHT20_DEVICE_ADDR << 1) | 1)
 #define AHT20_WRITE_ADDR ((AHT20_DEVICE_ADDR << 1) | 0)
 
+
 #define GET_BIT(byte, index) ((byte & (1 << index)) >> index)
 
 //////////////////////////////////////////////// GLOBAL_VARIABLE ////////////////////////////////////////////////
 
 uint8_t data[7] = {0};
-i2c_port_t i2c_port = 0;
 uint8_t busy;
 uint8_t mode;
 uint8_t cal;
 
-//////////////////////////////////////////////// PRIVATE_FUNCTION ////////////////////////////////////////////////
+//////////////////////////////////////////////// PRIVATE_DEFINITION ////////////////////////////////////////////////
+
+/// @brief send init command to device, in order to init the device
+/// @return esp_err_t for result
+static esp_err_t m_AHT20_command_init(void);
+
+/// @brief send reset command to device, in order to restart the device
+/// @return esp_err_t for result
+static esp_err_t m_AHT20_command_reset(void);
+
+/// @brief send measure command to device
+/// @return esp_err_t for result
+static esp_err_t m_AHT20_command_measure(void);
+
+/// @brief get the status of device
+/// @param pAHT20_data a pointer to the struct of data
+/// @return esp_err_t for result
+static esp_err_t m_AHT20_get_status(AHT20_data_t *pAHT20_data);
+
+/// @brief send a read command and get result form device, the data will be storaged in data[]
+/// @param pAHT20_data a pointer to the struct of data
+/// @return esp_err_t for result
+static esp_err_t m_AHT20_get_result(AHT20_data_t *pAHT20_data);
+
+//////////////////////////////////////////////// PRIVATE_DECLARATION ////////////////////////////////////////////////
 
 /// @brief send init command to device, in order to init the device
 /// @return esp_err_t for result
@@ -32,7 +56,7 @@ static esp_err_t m_AHT20_command_init(void)
     i2c_master_write_byte(handle, 0x00, true);             // 0x00 -> It`s the second arg for the command
 
     i2c_master_stop(handle);
-    i2c_master_cmd_begin(i2c_port, handle, 500 / portTICK_PERIOD_MS);
+    i2c_master_cmd_begin(I2C_MASTER_PORT, handle, 500 / portTICK_PERIOD_MS);
     i2c_cmd_link_delete(handle);
     ESP_LOGD("m_AHT20_command_init", "already send INIT code");
 
@@ -54,7 +78,7 @@ static esp_err_t m_AHT20_command_reset(void)
     i2c_master_write_byte(handle, 0xBA, true);             // 0xBA -> It`s a command code in order to reset
 
     i2c_master_stop(handle);
-    i2c_master_cmd_begin(i2c_port, handle, 500 / portTICK_PERIOD_MS);
+    i2c_master_cmd_begin(I2C_MASTER_PORT, handle, 500 / portTICK_PERIOD_MS);
     i2c_cmd_link_delete(handle);
     ESP_LOGD("m_AHT20_command_reset", "already send RESET code");
 
@@ -78,7 +102,7 @@ static esp_err_t m_AHT20_command_measure(void)
     i2c_master_write_byte(handle, 0x00, true);             // 0x00 -> It`s the second arg for the command
 
     i2c_master_stop(handle);
-    i2c_master_cmd_begin(i2c_port, handle, 500 / portTICK_PERIOD_MS);
+    i2c_master_cmd_begin(I2C_MASTER_PORT, handle, 500 / portTICK_PERIOD_MS);
     i2c_cmd_link_delete(handle);
     ESP_LOGD("m_AHT20_command_measure", "already send MEASURES code");
 
@@ -139,7 +163,7 @@ static esp_err_t m_AHT20_get_result(AHT20_data_t *pAHT20_data)
     i2c_master_read(handle, (uint8_t *)&data, 7, I2C_MASTER_ACK);
 
     i2c_master_stop(handle);
-    i2c_master_cmd_begin(i2c_port, handle, 500 / portTICK_PERIOD_MS);
+    i2c_master_cmd_begin(I2C_MASTER_PORT, handle, 500 / portTICK_PERIOD_MS);
     i2c_cmd_link_delete(handle);
     ESP_LOGD("m_AHT20_get_result", "already get the result");
 
@@ -147,59 +171,64 @@ static esp_err_t m_AHT20_get_result(AHT20_data_t *pAHT20_data)
     return ret;
 }
 
-//////////////////////////////////////////////// PUBLIC_FUNCTION ////////////////////////////////////////////////
+//////////////////////////////////////////////// PUBLIC_DECLARATION ////////////////////////////////////////////////
 
-void AHT20_task(AHT20_data_t *pAHT20_data)
+/// @brief measure the temp and rh
+/// @param pAHT20_data pointer of struct
+/// @return esp_err_t for result
+esp_err_t AHT20_measure(AHT20_data_t *pAHT20_data)
 {
+    esp_err_t ret = 1;
     uint32_t rh, temp = 0;
-    i2c_port = pAHT20_data->i2c_port;
     float rh_buf, temp_buf = 0;
 
-    while (1)
+    vTaskDelay(40 / portTICK_PERIOD_MS);
+    m_AHT20_command_measure();
+    vTaskDelay(75 / portTICK_PERIOD_MS);
+    m_AHT20_get_result(pAHT20_data);
+    m_AHT20_get_status(pAHT20_data);
+
+    // continue if busy
+    if (busy == 1)
+    {
+        ESP_LOGI("AHT20_task", "DEVICE IS BUSY");
+        return ret;
+    }
+
+    // if cal == 0, reset the device
+    if (cal == 0)
     {
         vTaskDelay(40 / portTICK_PERIOD_MS);
-        m_AHT20_command_measure();
-        vTaskDelay(75 / portTICK_PERIOD_MS);
-        m_AHT20_get_result(pAHT20_data);
-        m_AHT20_get_status(pAHT20_data);
-
-        // continue if busy
-        if (busy == 1)
-            continue;
-
-        // if cal == 0, reset the device
-        if (cal == 0)
-        {
-            vTaskDelay(40 / portTICK_PERIOD_MS);
-            m_AHT20_command_reset();
-            vTaskDelay(40 / portTICK_PERIOD_MS);
-            m_AHT20_command_init();
-            vTaskDelay(40 / portTICK_PERIOD_MS);
-            continue;
-        }
-
-        rh = (((uint32_t)data[1] << 16) | ((uint32_t)data[2] << 8) | (data[3])) >> 4;
-        temp = ((uint32_t)(data[3] & 0x0F) << 16) | ((uint32_t)data[4] << 8) | (uint32_t)data[5];
-
-        rh_buf = (rh * (0.0000953674316F));
-        temp_buf = (temp * (0.00019073F) - 50);
-
-        // check the measurement results and reset the device if it is out of range
-        if (pAHT20_data->RH == rh_buf || pAHT20_data->TEMP == temp_buf || rh_buf > 85 || rh_buf < 15 || temp_buf > 95 || temp_buf < -18)
-        {
-            vTaskDelay(40 / portTICK_PERIOD_MS);
-            m_AHT20_command_reset();
-            vTaskDelay(40 / portTICK_PERIOD_MS);
-            m_AHT20_command_init();
-            vTaskDelay(40 / portTICK_PERIOD_MS);
-            continue;
-        }
-
-        pAHT20_data->RH = rh_buf;
-        pAHT20_data->TEMP = temp_buf;
-        pAHT20_data->readable = 1;
-
-        ESP_LOGD("AHT20_task", "TEMP: %f; RH: %f", pAHT20_data->TEMP, pAHT20_data->RH);
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        m_AHT20_command_reset();
+        vTaskDelay(40 / portTICK_PERIOD_MS);
+        m_AHT20_command_init();
+        vTaskDelay(40 / portTICK_PERIOD_MS);
+        ESP_LOGI("AHT20_task", "NOT CAL OR DEVICE IS NOT CONNECTED");
+        return ret;
     }
+
+    rh = (((uint32_t)data[1] << 16) | ((uint32_t)data[2] << 8) | (data[3])) >> 4;
+    temp = ((uint32_t)(data[3] & 0x0F) << 16) | ((uint32_t)data[4] << 8) | (uint32_t)data[5];
+
+    rh_buf = (rh * (0.0000953674316F));
+    temp_buf = (temp * (0.00019073F) - 50);
+
+    // check the measurement results and reset the device if it is out of range
+    if (pAHT20_data->RH == rh_buf || pAHT20_data->TEMP == temp_buf || rh_buf > 85 || rh_buf < 15 || temp_buf > 95 || temp_buf < -18)
+    {
+        vTaskDelay(40 / portTICK_PERIOD_MS);
+        m_AHT20_command_reset();
+        vTaskDelay(40 / portTICK_PERIOD_MS);
+        m_AHT20_command_init();
+        vTaskDelay(40 / portTICK_PERIOD_MS);
+        ESP_LOGI("AHT20_task", "OUT OF RANGE");
+        return ret;
+    }
+
+    pAHT20_data->RH = rh_buf;
+    pAHT20_data->TEMP = temp_buf;
+
+    ESP_LOGI("AHT20_task", "TEMP: %f; RH: %f", pAHT20_data->TEMP, pAHT20_data->RH);
+    ret = 0;
+    return ret;
 }

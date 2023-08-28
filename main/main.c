@@ -35,6 +35,6 @@ void app_main(void)
         esp_err_t ret = AHT20_measure(&AHT20_data);
         if(ret == 0)
         printf("RH: %.2f; TEMP: %.2f\n", AHT20_data.RH, AHT20_data.TEMP);
-        vTaskDelay(3000 / portTICK_PERIOD_MS);
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
 }

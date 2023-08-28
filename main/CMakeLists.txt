@@ -1,2 +1,4 @@
-idf_component_register(SRCS "main.c" "aht20.c"
-                    INCLUDE_DIRS "../include")
+set(COMPONENT_SRCS "main.c")
+set(COMPONENT_ADD_INCLUDEDIRS "")
+
+register_component()

@@ -25,6 +25,7 @@ void aht20_setup()
 {
     i2c_param_config(I2C_MASTER_PORT, &conf);
     i2c_driver_install(I2C_MASTER_PORT, I2C_MODE_MASTER, 0, 0, 0);
+    AHT20_begin(&AHT20_data);
 }
 
 void app_main(void)

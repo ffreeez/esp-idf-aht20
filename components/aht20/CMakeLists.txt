@@ -1,5 +1,7 @@
-set(component_srcs "aht20.c")
+cmake_minimum_required(VERSION 3.5)
 
-idf_component_register(SRCS "${component_srcs}"
-                    PRIV_REQUIRES driver
-                    INCLUDE_DIRS "./include")
+idf_component_register(
+        SRCS "aht20.c"
+        PRIV_REQUIRES driver
+        INCLUDE_DIRS "include"
+)

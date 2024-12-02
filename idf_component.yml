@@ -1,0 +1,4 @@
+dependencies:
+  idf: '>=5.0'
+description: AHT20 driver
+version: 1.0.0
